@@ -17,8 +17,6 @@ import java.util.*;
 
 public class OpsFactory
 {
-  static Map<String, Command> _registeredCommands = new HashMap<String, Command>();
-
   public static Map<String, Command> getDefaultRegistry()
   {
     Map<String, Command> registry = new HashMap<String, Command>();
@@ -66,11 +64,11 @@ public class OpsFactory
 
   private static Command getCommand(Map<String, Command> registry, String name)
   {
-    if (!_registeredCommands.containsKey(name))
+    if (!registry.containsKey(name))
     {
       throw new IllegalArgumentException(String.format("command %s not found", name));
     }
-    return _registeredCommands.get(name);
+    return registry.get(name);
   }
 
   private static OPS processOPSFile(Map<String, Command> registry, File file)
