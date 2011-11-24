@@ -1,6 +1,7 @@
 package ops;
 
 
+import ops.commands.*;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -17,6 +18,18 @@ import java.util.*;
 public class OpsFactory
 {
   static Map<String, Command> _registeredCommands = new HashMap<String, Command>();
+
+  public static Map<String, Command> getDefaultRegistry()
+  {
+    Map<String, Command> registry = new HashMap<String, Command>();
+    registry.put("remove", new remove());
+    registry.put("write", new write());
+    registry.put("bind", new bind());
+    registry.put("halt", new halt());
+    registry.put("make", new make());
+    registry.put("modify", new modify());
+    return registry;
+  }
 
   public static OPS create(Map<String, Command> registry, String opsFile)
   {
