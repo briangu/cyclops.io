@@ -51,6 +51,28 @@ public class OpsFactory
 
     try
     {
+      JSONObject obj = readJSONFile(opsFile.getCanonicalPath());
+      ops = processOPSFile(registry, obj);
+      return ops;
+    }
+    catch (Exception e)
+    {
+      e.printStackTrace();
+    }
+
+    return ops;
+  }
+
+  public static OPS create(Map<String, Command> registry, JSONObject opsFile)
+  {
+    OPS ops = null;
+
+    try
+    {
+      if (opsFile.has("name"))
+      {
+        System.out.println("processing ops: " + opsFile.getString("name"));
+      }
       ops = processOPSFile(registry, opsFile);
       return ops;
     }
@@ -71,16 +93,11 @@ public class OpsFactory
     return registry.get(name);
   }
 
-  private static OPS processOPSFile(Map<String, Command> registry, File file)
+  private static OPS processOPSFile(Map<String, Command> registry, JSONObject obj)
       throws Exception
   {
     OPS ops = new OPS();
 
-    JSONObject obj = readJSONFile(file.getCanonicalPath());
-    if (obj.has("name"))
-    {
-      System.out.println("processing ops: " + obj.getString("name"));
-    }
     if (!obj.has("ops"))
     {
       throw new IllegalArgumentException("missing ops section");
