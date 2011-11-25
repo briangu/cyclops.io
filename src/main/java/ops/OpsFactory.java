@@ -161,6 +161,8 @@ public class OpsFactory
       }
     }
 
+    ops.drainInMemoryQueue();
+
     return ops;
   }
 

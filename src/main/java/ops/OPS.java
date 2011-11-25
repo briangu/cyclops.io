@@ -99,6 +99,7 @@ public class OPS
         try
         {
           wait();
+          continue;
         } catch (InterruptedException e)
         {
           break;
