@@ -7,6 +7,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class OPS
 {
@@ -15,8 +16,12 @@ public class OPS
   private List<PreparedRule> _preparedRules = new ArrayList<PreparedRule>();
   private Map<String, MemoryElement> _templates = new HashMap<String, MemoryElement>();
 
+  private ConcurrentLinkedQueue<MemoryElement> _memoryInQueue = new ConcurrentLinkedQueue<MemoryElement>();
+
   private boolean _debug = true;
   private boolean _halt = false;
+
+  private boolean _waitForWork = false;
 
   public void reset()
   {
@@ -24,6 +29,11 @@ public class OPS
     _rules.clear();
     _templates.clear();
     _wm.clear();
+  }
+
+  public void waitForWork(boolean wait)
+  {
+    _waitForWork = wait;
   }
 
   public void halt()
@@ -46,7 +56,7 @@ public class OPS
     _wm.remove(element);
   }
 
-  public MemoryElement make(MemoryElement element)
+  public synchronized MemoryElement make(MemoryElement element)
   {
     if (!_templates.containsKey(element.Type))
     {
@@ -54,9 +64,19 @@ public class OPS
     }
 
     MemoryElement newElement = _templates.get(element.Type).make(element.Values);
-    _wm.add(newElement);
+    _memoryInQueue.add(newElement);
+    notify();
 
     return newElement;
+  }
+
+  public void drainInMemoryQueue()
+  {
+    for (MemoryElement memoryElement : _memoryInQueue)
+    {
+      _wm.add(memoryElement);
+    }
+    _memoryInQueue.clear();
   }
 
   public void run()
@@ -64,14 +84,25 @@ public class OPS
     run(Integer.MAX_VALUE);
   }
 
-  public void run(int steps)
+  public synchronized void run(int steps)
   {
+    _halt = false;
+
     while (steps-- > 0 && !_halt)
     {
+      drainInMemoryQueue();
+
       Match match = match();
       if (match == null)
       {
-        break;
+        if (!_waitForWork) break;
+        try
+        {
+          wait();
+        } catch (InterruptedException e)
+        {
+          break;
+        }
       }
 
       CommandContext context = new CommandContext(this, match.Elements, match.Vars);
@@ -85,11 +116,21 @@ public class OPS
           args[i] = context.resolveValue(production.Params[i]);
         }
 
-        production.Command.exec(context, args);
+        try
+        {
+          production.Command.exec(context, args);
+        }
+        catch (Exception e)
+        {
+          System.err.println(production.toString());
+          e.printStackTrace();
+        }
       }
 
 //      if (_debug) dumpWorkingMemory();
     }
+
+    _halt = true;
   }
 
   private void dumpWorkingMemory()

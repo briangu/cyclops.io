@@ -3,5 +3,5 @@ package ops;
 
 public interface Command
 {
-  void exec(CommandContext context, Object[] args);
+  void exec(CommandContext context, Object[] args) throws Exception;
 }
