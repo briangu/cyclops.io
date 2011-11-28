@@ -56,27 +56,38 @@ public class OPS
     _wm.remove(element);
   }
 
-  public synchronized MemoryElement make(MemoryElement element)
+  public MemoryElement make(MemoryElement element)
   {
-    if (!_templates.containsKey(element.Type))
-    {
-      throw new IllegalArgumentException(String.format("memory element type %s not literalized", element.Type));
-    }
+    MemoryElement newElement = null;
 
-    MemoryElement newElement = _templates.get(element.Type).make(element.Values);
-    _memoryInQueue.add(newElement);
-    notify();
+    try
+    {
+      if (!_templates.containsKey(element.Type))
+      {
+        throw new IllegalArgumentException(String.format("memory element type %s not literalized", element.Type));
+      }
+
+      newElement = _templates.get(element.Type).make(element.Values);
+
+      _memoryInQueue.add(newElement);
+//    notify();
+
+      return newElement;
+    }
+    catch (Exception e)
+    {
+      e.printStackTrace();
+    }
 
     return newElement;
   }
 
   public void drainInMemoryQueue()
   {
-    for (MemoryElement memoryElement : _memoryInQueue)
+    while(!_memoryInQueue.isEmpty())
     {
-      _wm.add(memoryElement);
+      _wm.add(_memoryInQueue.remove());
     }
-    _memoryInQueue.clear();
   }
 
   public void run()
@@ -84,7 +95,7 @@ public class OPS
     run(Integer.MAX_VALUE);
   }
 
-  public synchronized void run(int steps)
+  public void run(int steps)
   {
     _halt = false;
 
@@ -100,6 +111,8 @@ public class OPS
           continue;
         }
 
+        break;
+/*
         if (!_waitForWork) break;
 
         try
@@ -110,6 +123,7 @@ public class OPS
         {
           break;
         }
+*/
       }
 
       CommandContext context = new CommandContext(this, match.Elements, match.Vars);
@@ -286,7 +300,7 @@ public class OPS
           {
             if (vars.containsKey(strQpVal))
             {
-              if (vars.get(strQpVal).equals(val))
+              if (!vars.get(strQpVal).equals(val))
               {
                 return false;
               }
