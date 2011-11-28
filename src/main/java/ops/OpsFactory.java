@@ -110,7 +110,7 @@ public class OpsFactory
       JSONArray statement = arr.getJSONArray(i);
       if (statement.length() < 2)
       {
-        System.out.println("malformed statement: " + statement);
+        System.err.println("malformed statement: " + statement);
       }
 
       String cmd = statement.getString(0);
