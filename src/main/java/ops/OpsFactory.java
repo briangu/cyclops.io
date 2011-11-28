@@ -71,7 +71,7 @@ public class OpsFactory
     {
       if (opsFile.has("name"))
       {
-        System.out.println("processing ops: " + opsFile.getString("name"));
+        System.err.println("processing ops: " + opsFile.getString("name"));
       }
       ops = processOPSFile(registry, opsFile);
       return ops;
