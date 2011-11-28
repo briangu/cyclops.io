@@ -95,7 +95,13 @@ public class OPS
       Match match = match();
       if (match == null)
       {
+        if (!_memoryInQueue.isEmpty())
+        {
+          continue;
+        }
+
         if (!_waitForWork) break;
+
         try
         {
           wait();
@@ -273,47 +279,38 @@ public class OPS
       }
       else
       {
-        if (val == null)
+        if (qp.Value instanceof String)
         {
-          return false;
-        }
-        else
-        {
-          if (qp.Value instanceof String)
+          String strQpVal = (String)qp.Value;
+          if (strQpVal.startsWith("$"))
           {
-            String strQpVal = (String)qp.Value;
-            if (strQpVal.startsWith("$"))
+            if (vars.containsKey(strQpVal))
             {
-              if (vars.containsKey(strQpVal))
-              {
-                if (!val.equals(vars.get(strQpVal)))
-                {
-                  return false;
-                }
-              }
-              else
-              {
-                // variable matches everything
-                vars.put(strQpVal, val);
-              }
-            }
-            else
-            {
-              String strVal = (String)val;
-              if (!strQpVal.equals(strVal))
+              if (vars.get(strQpVal).equals(val))
               {
                 return false;
               }
             }
+            else
+            {
+              // variable matches everything
+              vars.put(strQpVal, val);
+            }
           }
           else
           {
-            if (!qp.Value.equals(val))
+            if (!strQpVal.equals(val))
             {
               return false;
             }
           }
-          // match
+        }
+        else
+        {
+          if (!qp.Value.equals(val))
+          {
+            return false;
+          }
         }
       }
     }
