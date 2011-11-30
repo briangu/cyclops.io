@@ -8,6 +8,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 
 public class OPS
 {
@@ -15,6 +18,8 @@ public class OPS
   private List<Rule> _rules = new ArrayList<Rule>();
   private List<PreparedRule> _preparedRules = new ArrayList<PreparedRule>();
   private Map<String, MemoryElement> _templates = new HashMap<String, MemoryElement>();
+
+  ExecutorService _threadPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
   private ConcurrentLinkedQueue<MemoryElement> _memoryInQueue = new ConcurrentLinkedQueue<MemoryElement>();
 
@@ -29,6 +34,11 @@ public class OPS
     _rules.clear();
     _templates.clear();
     _wm.clear();
+  }
+
+  public void shutdown()
+  {
+    _threadPool.shutdown();
   }
 
   public void waitForWork(boolean wait)
@@ -126,11 +136,11 @@ public class OPS
 */
       }
 
-      CommandContext context = new CommandContext(this, match.Elements, match.Vars);
+      final CommandContext context = new CommandContext(this, match.Elements, match.Vars);
 
-      for (ProductionSpec production : match.Rule.Productions)
+      for (final ProductionSpec production : match.Rule.Productions)
       {
-        Object[] args = new Object[production.Params.length];
+        final Object[] args = new Object[production.Params.length];
 
         for (int i = 0; i < args.length; i++)
         {
@@ -139,7 +149,28 @@ public class OPS
 
         try
         {
-          production.Command.exec(context, args);
+          if (production.Command instanceof AsyncCommand)
+          {
+            submit(new Runnable()
+            {
+              @Override
+              public void run()
+              {
+                try
+                {
+                  production.Command.exec(context, args);
+                }
+                catch (Exception e)
+                {
+                  e.printStackTrace();
+                }
+              }
+            });
+          }
+          else
+          {
+            production.Command.exec(context, args);
+          }
         }
         catch (Exception e)
         {
@@ -222,6 +253,10 @@ public class OPS
     }
 
     return specificity;
+  }
+
+  public void submit(Runnable runnable)
+  {
   }
 
   private class PreparedRule
