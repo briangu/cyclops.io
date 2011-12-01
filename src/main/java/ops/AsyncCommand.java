@@ -1,7 +1,6 @@
 package ops;
 
 
-public interface AsyncCommand
+public interface AsyncCommand extends Command
 {
-  void exec(CommandContext context, Object[] args) throws Exception;
 }
