@@ -7,6 +7,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -26,8 +27,6 @@ public class OPS
   private boolean _debug = true;
   private boolean _halt = false;
 
-  private boolean _waitForWork = false;
-
   public void reset()
   {
     _halt = false;
@@ -39,11 +38,6 @@ public class OPS
   public void shutdown()
   {
     _threadPool.shutdown();
-  }
-
-  public void waitForWork(boolean wait)
-  {
-    _waitForWork = wait;
   }
 
   public void halt()
@@ -80,7 +74,6 @@ public class OPS
       newElement = _templates.get(element.Type).make(element.Values);
 
       _memoryInQueue.add(newElement);
-//    notify();
 
       return newElement;
     }
@@ -122,18 +115,6 @@ public class OPS
         }
 
         break;
-/*
-        if (!_waitForWork) break;
-
-        try
-        {
-          wait();
-          continue;
-        } catch (InterruptedException e)
-        {
-          break;
-        }
-*/
       }
 
       final CommandContext context = new CommandContext(this, match.Elements, match.Vars);
@@ -151,21 +132,28 @@ public class OPS
         {
           if (production.Command instanceof AsyncCommand)
           {
-            submit(new Runnable()
-            {
-              @Override
-              public void run()
-              {
-                try
-                {
-                  production.Command.exec(context, args);
-                }
-                catch (Exception e)
-                {
-                  e.printStackTrace();
-                }
-              }
-            });
+            OpsRunnable opsRunnable =
+                new OpsRunnable(
+                  match.Rule.Name,
+                  new Runnable()
+                  {
+                    @Override
+                    public void run()
+                    {
+                      try
+                      {
+                        production.Command.exec(context, args);
+                      }
+                      catch (Exception e)
+                      {
+                        e.printStackTrace();
+                      }
+                    }
+                  });
+
+            make(new MemoryElement("async_task", "phase", "start", "id", opsRunnable.Id, "name", match.Rule.Name));
+
+            _threadPool.submit(opsRunnable);
           }
           else
           {
@@ -255,9 +243,33 @@ public class OPS
     return specificity;
   }
 
-  public void submit(Runnable runnable)
+  private class OpsRunnable implements Runnable
   {
-    _threadPool.submit(runnable);
+    public String Id = UUID.randomUUID().toString();
+    public Runnable Runnable;
+    public String Name;
+    public OpsRunnable(String name, Runnable runnable)
+    {
+      Name = name;
+      Runnable = runnable;
+    }
+
+    @Override
+    public void run()
+    {
+      try
+      {
+        Runnable.run();
+      }
+      catch (Exception e)
+      {
+        e.printStackTrace();
+      }
+      finally
+      {
+        make(new MemoryElement("async_task", "phase", "stop", "id", Id, "name", Name));
+      }
+    }
   }
 
   private class PreparedRule

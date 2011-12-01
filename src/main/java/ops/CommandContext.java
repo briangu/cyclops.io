@@ -112,9 +112,4 @@ public class CommandContext
   {
     _vars.put(name, val);
   }
-
-  public void submit(Runnable runnable)
-  {
-    _ops.submit(runnable);
-  }
 }
