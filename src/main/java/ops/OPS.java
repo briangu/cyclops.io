@@ -257,6 +257,7 @@ public class OPS
 
   public void submit(Runnable runnable)
   {
+    _threadPool.submit(runnable);
   }
 
   private class PreparedRule
