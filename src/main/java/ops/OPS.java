@@ -60,6 +60,11 @@ public class OPS
     _wm.remove(element);
   }
 
+  public MemoryElement make(String type, Object... args)
+  {
+    return make(new MemoryElement(type, args));
+  }
+
   public MemoryElement make(MemoryElement element)
   {
     MemoryElement newElement = null;

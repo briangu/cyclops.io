@@ -112,4 +112,9 @@ public class CommandContext
   {
     _vars.put(name, val);
   }
+
+  public void make(String msg, Object... args)
+  {
+    _ops.make(msg, args);
+  }
 }
