@@ -20,8 +20,7 @@ public class OPS
   private List<PreparedRule> _preparedRules = new ArrayList<PreparedRule>();
   private Map<String, MemoryElement> _templates = new HashMap<String, MemoryElement>();
 
-//  ExecutorService _threadPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-  ExecutorService _threadPool = Executors.newCachedThreadPool();
+  ExecutorService _threadPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
   private ConcurrentLinkedQueue<MemoryElement> _memoryInQueue = new ConcurrentLinkedQueue<MemoryElement>();
 
