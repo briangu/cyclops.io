@@ -1,8 +1,6 @@
 package ops;
 
 
-import ops.MemoryElement;
-import ops.OPS;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,12 +11,14 @@ public class CommandContext
   Map<String, Object> _vars;
   List<MemoryElement> _elements;
   OPS _ops;
+  Rule _rule;
 
-  public CommandContext(OPS ops, List<MemoryElement> elements, Map<String, Object> vars)
+  public CommandContext(OPS ops, Rule rule, List<MemoryElement> elements, Map<String, Object> vars)
   {
     _ops = ops;
     _elements = elements;
     _vars = vars;
+    _rule = rule;
   }
 
   public void halt()
@@ -116,5 +116,10 @@ public class CommandContext
   public void make(String msg, Object... args)
   {
     _ops.make(msg, args);
+  }
+
+  public void promote()
+  {
+    _ops.promote(_rule);
   }
 }

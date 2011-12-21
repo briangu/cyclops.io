@@ -26,6 +26,7 @@ public class OpsFactory
     registry.put("halt", new halt());
     registry.put("make", new make());
     registry.put("modify", new modify());
+    registry.put("promote", new promote());
     return registry;
   }
 
@@ -103,6 +104,8 @@ public class OpsFactory
       throw new IllegalArgumentException("missing ops section");
     }
 
+    List<Rule> rulesToAdd = new ArrayList<Rule>();
+    
     JSONArray arr = obj.getJSONArray("ops");
 
     for (int i = 0; i < arr.length(); i++)
@@ -174,10 +177,11 @@ public class OpsFactory
           productions.add(new ProductionSpec(command, params));
         }
 
-        ops.addRule(new Rule(productionName, query, productions));
+        rulesToAdd.add(new Rule(productionName, query, productions));
       }
     }
 
+    ops.addRules(rulesToAdd);
     ops.drainInMemoryQueue();
 
     return ops;

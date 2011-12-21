@@ -26,6 +26,8 @@ public class OPS
 
   private boolean _debug = true;
   private boolean _halt = false;
+  private boolean _sortRulesBySpecificity = false;
+  private boolean _useGreedyRules = true;
 
   public void reset()
   {
@@ -122,7 +124,7 @@ public class OPS
         break;
       }
 
-      final CommandContext context = new CommandContext(this, match.Elements, match.Vars);
+      final CommandContext context = new CommandContext(this, match.Rule, match.Elements, match.Vars);
 
       for (final ProductionSpec production : match.Rule.Productions)
       {
@@ -210,14 +212,17 @@ public class OPS
       _preparedRules.add(preparedRule);
     }
 
-    Collections.sort(_preparedRules, new Comparator<PreparedRule>()
+    if (_sortRulesBySpecificity)
     {
-      @Override
-      public int compare(PreparedRule preparedRule, PreparedRule preparedRule1)
+      Collections.sort(_preparedRules, new Comparator<PreparedRule>()
       {
-        return preparedRule1.Specificity.compareTo(preparedRule.Specificity);
-      }
-    });
+        @Override
+        public int compare(PreparedRule preparedRule, PreparedRule preparedRule1)
+        {
+          return preparedRule1.Specificity.compareTo(preparedRule.Specificity);
+        }
+      });
+    }
 
     _rules.clear();
     for (PreparedRule preparedRule : _preparedRules)
@@ -246,6 +251,20 @@ public class OPS
     }
 
     return specificity;
+  }
+
+  public void promote(Rule rule)
+  {
+    int idx = _rules.indexOf(rule);
+    if (idx < 0)
+    {
+      throw new IllegalArgumentException("rule not found in rule set: " + rule.Name);
+    }
+    if (idx != 0)
+    {
+      _rules.remove(rule);
+      _rules.add(0, rule);
+    }
   }
 
   private class OpsRunnable implements Runnable
