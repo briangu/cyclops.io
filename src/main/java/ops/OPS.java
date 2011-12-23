@@ -24,10 +24,8 @@ public class OPS
 
   private ConcurrentLinkedQueue<MemoryElement> _memoryInQueue = new ConcurrentLinkedQueue<MemoryElement>();
 
-  private boolean _debug = true;
   private boolean _halt = false;
   private boolean _sortRulesBySpecificity = false;
-  private boolean _useGreedyRules = true;
 
   public void reset()
   {
