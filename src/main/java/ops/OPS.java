@@ -18,8 +18,9 @@ public class OPS
   private List<PreparedRule> _preparedRules = new ArrayList<PreparedRule>();
   private Map<String, MemoryElement> _templates = new HashMap<String, MemoryElement>();
   private Rule _lastRuleFired = null;
-  
-  ExecutorService _threadPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+
+  ExecutorService _productionPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+  ExecutorService _rulePool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
   private ConcurrentLinkedQueue<MemoryElement> _memoryInQueue = new ConcurrentLinkedQueue<MemoryElement>();
 
@@ -36,7 +37,8 @@ public class OPS
 
   public void shutdown()
   {
-    _threadPool.shutdown();
+    _productionPool.shutdown();
+    _rulePool.shutdown();
   }
 
   public void halt()
@@ -116,7 +118,7 @@ public class OPS
     {
       drainInMemoryQueue();
 
-      Match match = match(_threadPool, _rules, _lastRuleFired, _wm);
+      Match match = match(_rulePool, _rules, _lastRuleFired, _wm);
       if (match == null)
       {
         if (!_memoryInQueue.isEmpty())
@@ -165,7 +167,7 @@ public class OPS
 
             make(new MemoryElement("async_task", "phase", "start", "id", opsRunnable.Id, "name", match.Rule.Name));
 
-            _threadPool.submit(opsRunnable);
+            _productionPool.submit(opsRunnable);
           }
           else
           {
