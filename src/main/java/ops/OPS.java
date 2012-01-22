@@ -8,18 +8,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 
 
 public class OPS
 {
-  private List<MemoryElement> _wm = new ArrayList<MemoryElement>();
+  private HashMap<String, List<MemoryElement>> _wm = new HashMap<String, List<MemoryElement>>();
   private List<Rule> _rules = new ArrayList<Rule>();
   private List<PreparedRule> _preparedRules = new ArrayList<PreparedRule>();
   private Map<String, MemoryElement> _templates = new HashMap<String, MemoryElement>();
-
+  private Rule _lastRuleFired = null;
+  
   ExecutorService _threadPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
   private ConcurrentLinkedQueue<MemoryElement> _memoryInQueue = new ConcurrentLinkedQueue<MemoryElement>();
@@ -52,12 +51,18 @@ public class OPS
 
   public void insert(MemoryElement element)
   {
-    _wm.add(element);
+    if (!_wm.containsKey(element.Type))
+    {
+      _wm.put(element.Type, new ArrayList<MemoryElement>());
+    }
+    _wm.get(element.Type).add(element);
   }
 
   public void remove(MemoryElement element)
   {
-    _wm.remove(element);
+    List<MemoryElement> wme = _wm.get(element.Type);
+    if (wme == null) return;
+    wme.remove(element);
   }
 
   public MemoryElement make(String type, Object... args)
@@ -94,7 +99,7 @@ public class OPS
   {
     while(!_memoryInQueue.isEmpty())
     {
-      _wm.add(_memoryInQueue.remove());
+      insert(_memoryInQueue.remove());
     }
   }
 
@@ -111,7 +116,7 @@ public class OPS
     {
       drainInMemoryQueue();
 
-      Match match = match();
+      Match match = match(_threadPool, _rules, _lastRuleFired, _wm);
       if (match == null)
       {
         if (!_memoryInQueue.isEmpty())
@@ -121,6 +126,8 @@ public class OPS
 
         break;
       }
+
+      _lastRuleFired = match.Rule;
 
       final CommandContext context = new CommandContext(this, match.Rule, match.Elements, match.Vars);
 
@@ -180,9 +187,12 @@ public class OPS
 
   private void dumpWorkingMemory()
   {
-    for (MemoryElement me : _wm)
+    for (List<MemoryElement> wme : _wm.values())
     {
-      System.out.println(me.toString());
+      for (MemoryElement me : wme)
+      {
+        System.out.println(me.toString());
+      }
     }
   }
 
@@ -311,18 +321,23 @@ public class OPS
 
       for (QueryElement qe : rule.Query)
       {
+        List<MemoryElement> wme = _wm.get(qe.Type);
+
         boolean haveMatch = false;
 
-        for (MemoryElement me : _wm)
+        if (wme != null)
         {
-          if (elements.contains(me)) continue;
-          Map<String, Object> tmpVars = new HashMap<String, Object>(vars);
-          haveMatch = compare(qe, me, tmpVars);
-          if (haveMatch)
+          for (MemoryElement me : wme)
           {
-            vars = tmpVars;
-            elements.add(me);
-            break;
+            if (elements.contains(me)) continue;
+            Map<String, Object> tmpVars = new HashMap<String, Object>(vars);
+            haveMatch = compare(qe, me, tmpVars);
+            if (haveMatch)
+            {
+              vars = tmpVars;
+              elements.add(me);
+              break;
+            }
           }
         }
 
@@ -342,7 +357,109 @@ public class OPS
     return match;
   }
 
-  private boolean compare(QueryElement qe, MemoryElement me, Map<String, Object> vars)
+  private static Match match(Rule rule, HashMap<String, List<MemoryElement>> wm)
+  {
+    Match match = null;
+
+    List<MemoryElement> elements = new ArrayList<MemoryElement>();
+    Map<String, Object> vars = new HashMap<String, Object>();
+
+    for (QueryElement qe : rule.Query)
+    {
+      List<MemoryElement> wme = wm.get(qe.Type);
+
+      boolean haveMatch = false;
+
+      if (wme != null)
+      {
+        for (MemoryElement me : wme)
+        {
+          if (elements.contains(me)) continue;
+          Map<String, Object> tmpVars = new HashMap<String, Object>(vars);
+          haveMatch = compare(qe, me, tmpVars);
+          if (haveMatch)
+          {
+            vars = tmpVars;
+            elements.add(me);
+            break;
+          }
+        }
+      }
+
+      if (!haveMatch)
+      {
+        break;
+      }
+    }
+
+    if (elements.size() == rule.Query.size())
+    {
+      match = new Match(rule, elements, vars);
+    }
+
+    return match;
+  }
+
+  private Match match(ExecutorService e, List<Rule> rules, Rule lastRuleFired, final HashMap<String, List<MemoryElement>> wm)
+  {
+    CompletionService<Match> ecs = new ExecutorCompletionService<Match>(e);
+
+    int n = rules.size();
+
+    List<Future<Match>> futures = new ArrayList<Future<Match>>(n);
+
+    List<Match> hits = new ArrayList<Match>();
+
+    try
+    {
+      for (final Rule rule : rules)
+      {
+        futures.add(ecs.submit(new Callable<Match>()
+        {
+          @Override
+          public Match call() throws Exception
+          {
+            return match(rule, wm);
+          }
+        }));
+      }
+
+      for (int i = 0; i < n; ++i)
+      {
+        try
+        {
+          Match r = ecs.take().get();
+          if (r != null)
+          {
+            hits.add(r);
+          }
+        }
+        catch (ExecutionException ignore)
+        {
+        }
+        catch (InterruptedException e1)
+        {
+          break;
+        }
+      }
+    }
+    finally
+    {
+      for (Future<Match> f : futures)
+      {
+        f.cancel(true);
+      }
+    }
+
+    if (hits.size() == 0) return null;
+
+    // RESOLVE CONFLICT
+    if (hits.size() == 1) return hits.get(0);
+    hits.remove(lastRuleFired);
+    return hits.get(0);
+  }
+
+  private static boolean compare(QueryElement qe, MemoryElement me, Map<String, Object> vars)
   {
     if (!(me.Type.equals(qe.Type))) return false;
 
@@ -402,7 +519,7 @@ public class OPS
     return true;
   }
 
-  private class Match
+  private static class Match
   {
     public Rule Rule;
     public List<MemoryElement> Elements;
