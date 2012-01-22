@@ -18,6 +18,8 @@ public class OPS
   private List<PreparedRule> _preparedRules = new ArrayList<PreparedRule>();
   private Map<String, MemoryElement> _templates = new HashMap<String, MemoryElement>();
   private Rule _lastRuleFired = null;
+  private Map<String, String> _asyncTickets = new ConcurrentHashMap<String, String>();
+  
 
   ExecutorService _productionPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
   ExecutorService _rulePool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
@@ -121,7 +123,7 @@ public class OPS
       Match match = match(_rules, _lastRuleFired, _wm);
       if (match == null)
       {
-        if (!_memoryInQueue.isEmpty())
+        if (!_memoryInQueue.isEmpty() || _asyncTickets.size() > 0)
         {
           continue;
         }
@@ -165,7 +167,7 @@ public class OPS
                     }
                   });
 
-            make(new MemoryElement("async_task", "phase", "start", "id", opsRunnable.Id, "name", match.Rule.Name));
+            _asyncTickets.put(opsRunnable.Id, match.Rule.Name);
 
             _productionPool.submit(opsRunnable);
           }
@@ -301,7 +303,7 @@ public class OPS
       }
       finally
       {
-        make(new MemoryElement("async_task", "phase", "stop", "id", Id, "name", Name));
+        _asyncTickets.remove(Id);
       }
     }
   }
