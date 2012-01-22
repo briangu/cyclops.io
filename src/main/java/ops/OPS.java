@@ -118,7 +118,7 @@ public class OPS
     {
       drainInMemoryQueue();
 
-      Match match = match(_rulePool, _rules, _lastRuleFired, _wm);
+      Match match = match(_rules, _lastRuleFired, _wm);
       if (match == null)
       {
         if (!_memoryInQueue.isEmpty())
@@ -450,6 +450,27 @@ public class OPS
       for (Future<Match> f : futures)
       {
         f.cancel(true);
+      }
+    }
+
+    if (hits.size() == 0) return null;
+
+    // RESOLVE CONFLICT
+    if (hits.size() == 1) return hits.get(0);
+    hits.remove(lastRuleFired);
+    return hits.get(0);
+  }
+
+  private Match match(List<Rule> rules, Rule lastRuleFired, final HashMap<String, List<MemoryElement>> wm)
+  {
+    List<Match> hits = new ArrayList<Match>();
+
+    for (final Rule rule : rules)
+    {
+      Match m = match(rule, wm);
+      if (m != null)
+      {
+        hits.add(m);
       }
     }
 
