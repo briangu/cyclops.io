@@ -265,20 +265,6 @@ public class OPS
     return specificity;
   }
 
-  public void promote(Rule rule)
-  {
-    int idx = _rules.indexOf(rule);
-    if (idx < 0)
-    {
-      throw new IllegalArgumentException("rule not found in rule set: " + rule.Name);
-    }
-    if (idx != 0)
-    {
-      _rules.remove(rule);
-      _rules.add(0, rule);
-    }
-  }
-
   private class OpsRunnable implements Runnable
   {
     public String Id = UUID.randomUUID().toString();
