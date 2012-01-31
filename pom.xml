@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>io.cyclops</groupId>
   <artifactId>io.cyclops</artifactId>
-  <version>0.1.0</version>
+  <version>0.1.1-SNAPSHOT</version>
   <name>cyclops</name>
   <packaging>jar</packaging>
   <description>A simple implementation of OPS using Java and JSON.</description>
