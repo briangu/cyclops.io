@@ -117,9 +117,4 @@ public class CommandContext
   {
     _ops.make(msg, args);
   }
-
-  public void promote()
-  {
-    _ops.promote(_rule);
-  }
 }

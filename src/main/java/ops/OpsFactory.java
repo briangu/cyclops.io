@@ -26,7 +26,6 @@ public class OpsFactory
     registry.put("halt", new halt());
     registry.put("make", new make());
     registry.put("modify", new modify());
-    registry.put("promote", new promote());
     return registry;
   }
 
