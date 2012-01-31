@@ -2,23 +2,24 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>cyclops</groupId>
-  <artifactId>cyclops</artifactId>
-  <version>1.0-SNAPSHOT</version>
+  <groupId>io.cyclops</groupId>
+  <artifactId>io.cyclops</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
   <name>cyclops</name>
   <packaging>jar</packaging>
-  <description>
-    A simple implementation of OPS using Java and JSON.
-  </description>
-  <url>https://github.com/briangu/f9k</url>
+  <description>A simple implementation of OPS using Java and JSON.</description>
+  <url>https://github.com/briangu/cyclops.io</url>
+
+  <parent>
+    <groupId>org.sonatype.oss</groupId>
+    <artifactId>oss-parent</artifactId>
+    <version>7</version>
+  </parent>
 
   <developers>
     <developer>
       <id>briangu</id>
       <name>Brian Guarraci</name>
-      <email>brian@ops5.com</email>
-      <url>http://eismcc.com</url>
-      <timezone>-8</timezone>
     </developer>
   </developers>
 
@@ -29,6 +30,12 @@
       <distribution>repo</distribution>
     </license>
   </licenses>
+
+  <scm>
+    <connection>scm:git://github.com/briangu/cyclops.io.git</connection>
+    <developerConnection>scm:git:git@github.com:briangu/cyclops.io.git</developerConnection>
+    <url>https://github.com/briangu/cyclops.io</url>
+  </scm>
 
   <dependencies>
     <dependency>
@@ -67,6 +74,48 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>2.8.1</version>
+        <executions>
+          <execution>
+            <id>attach-javadocs</id>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <id>release-sign-artifacts</id>
+      <activation>
+        <property>
+          <name>performRelease</name>
+          <value>true</value>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>
