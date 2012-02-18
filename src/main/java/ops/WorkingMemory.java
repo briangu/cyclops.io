@@ -25,12 +25,21 @@ public class WorkingMemory
   private Map<String, MemoryElement> _templates = new HashMap<String, MemoryElement>();
   private ConcurrentLinkedQueue<MemoryElement> _memoryInQueue = new ConcurrentLinkedQueue<MemoryElement>();
 
-  private boolean _waitForItems = true;
+  private final boolean _waitForItems;
+
+  public WorkingMemory() {
+    this(false);
+  }
+
+  public WorkingMemory(boolean waitForItems) {
+    _waitForItems = waitForItems;
+  }
 
   public void reset()
   {
     _templates.clear();
     _wm.clear();
+    notifyDrain();
   }
 
   public List<MemoryElement> get(String key) {
@@ -54,6 +63,8 @@ public class WorkingMemory
       _wm.put(element.Type, new ArrayList<MemoryElement>());
     }
     _wm.get(element.Type).add(element);
+
+    notifyDrain();
   }
 
   public void remove(MemoryElement element)
@@ -61,6 +72,14 @@ public class WorkingMemory
     List<MemoryElement> wme = _wm.get(element.Type);
     if (wme == null) return;
     wme.remove(element);
+  }
+
+  private void notifyDrain() {
+    if (_waitForItems) {
+      synchronized (_memoryInQueue) {
+        _memoryInQueue.notify();
+      }
+    }
   }
 
   public MemoryElement make(String type, Object... args)
@@ -83,9 +102,7 @@ public class WorkingMemory
 
       _memoryInQueue.add(newElement);
 
-      synchronized (_memoryInQueue) {
-        _memoryInQueue.notify();
-      }
+      notifyDrain();
 
       return newElement;
     }
@@ -99,14 +116,16 @@ public class WorkingMemory
 
   public void drainInMemoryQueue()
   {
-    synchronized (_memoryInQueue) {
-      if (_memoryInQueue.size() == 0) {
-        try
-        {
-          _memoryInQueue.wait();
-        }
-        catch (InterruptedException e)
-        {
+    if (_waitForItems) {
+      synchronized (_memoryInQueue) {
+        if (_memoryInQueue.size() == 0) {
+          try
+          {
+            _memoryInQueue.wait();
+          }
+          catch (InterruptedException e)
+          {
+          }
         }
       }
     }
