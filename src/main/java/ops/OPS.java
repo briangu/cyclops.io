@@ -13,28 +13,40 @@ import java.util.concurrent.*;
 
 public class OPS
 {
-  private HashMap<String, List<MemoryElement>> _wm = new HashMap<String, List<MemoryElement>>();
+  private WorkingMemory _wm;
+
   private List<Rule> _rules = new ArrayList<Rule>();
   private List<PreparedRule> _preparedRules = new ArrayList<PreparedRule>();
-  private Map<String, MemoryElement> _templates = new HashMap<String, MemoryElement>();
   private Rule _lastRuleFired = null;
   private Map<String, String> _asyncTickets = new ConcurrentHashMap<String, String>();
-  
 
   ExecutorService _productionPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
   ExecutorService _rulePool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
-  private ConcurrentLinkedQueue<MemoryElement> _memoryInQueue = new ConcurrentLinkedQueue<MemoryElement>();
-
   private boolean _halt = false;
   private boolean _sortRulesBySpecificity = false;
+
+  public OPS() {
+    this(new WorkingMemory());
+  }
+
+  public OPS(WorkingMemory wm) {
+    _wm = wm;
+  }
+
+  public WorkingMemory getWorkingMemory() {
+    return _wm;
+  }
+
+  public void setWorkingMemory(WorkingMemory wm) {
+    _wm = wm;
+  }
 
   public void reset()
   {
     _halt = false;
     _rules.clear();
-    _templates.clear();
-    _wm.clear();
+    _wm.reset();
   }
 
   public void shutdown()
@@ -48,86 +60,24 @@ public class OPS
     _halt = true;
   }
 
-  public void literalize(MemoryElement template)
-  {
-    _templates.put(template.Type, template);
-  }
-
-  public void insert(MemoryElement element)
-  {
-    if (!_wm.containsKey(element.Type))
-    {
-      _wm.put(element.Type, new ArrayList<MemoryElement>());
-    }
-    _wm.get(element.Type).add(element);
-  }
-
-  public void remove(MemoryElement element)
-  {
-    List<MemoryElement> wme = _wm.get(element.Type);
-    if (wme == null) return;
-    wme.remove(element);
-  }
-
-  public MemoryElement make(String type, Object... args)
-  {
-    return make(new MemoryElement(type, args));
-  }
-
-  public MemoryElement make(MemoryElement element)
-  {
-    MemoryElement newElement = null;
-
-    try
-    {
-      if (!_templates.containsKey(element.Type))
-      {
-        throw new IllegalArgumentException(String.format("memory element type %s not literalized", element.Type));
-      }
-
-      newElement = _templates.get(element.Type).make(element.Values);
-
-      _memoryInQueue.add(newElement);
-
-      return newElement;
-    }
-    catch (Exception e)
-    {
-      e.printStackTrace();
-    }
-
-    return newElement;
-  }
-
-  public void drainInMemoryQueue()
-  {
-    while(!_memoryInQueue.isEmpty())
-    {
-      insert(_memoryInQueue.remove());
-    }
-  }
-
   public void run()
   {
-    run(Integer.MAX_VALUE);
+    run(-1);
   }
 
   public void run(int steps)
   {
     _halt = false;
+    boolean checkSteps = steps > 0;
 
-    while (steps-- > 0 && !_halt)
+    while ((!checkSteps || steps-- > 0) && !_halt)
     {
-      drainInMemoryQueue();
+      _wm.drainInMemoryQueue();
 
       Match match = match(_rules, _lastRuleFired, _wm);
       if (match == null)
       {
-        if (!_memoryInQueue.isEmpty() || _asyncTickets.size() > 0)
-        {
-          continue;
-        }
-
+        if (_wm.HasQueuedItems() || _asyncTickets.size() > 0) continue;
         break;
       }
 
@@ -182,22 +132,9 @@ public class OPS
           e.printStackTrace();
         }
       }
-
-//      if (_debug) dumpWorkingMemory();
     }
 
     _halt = true;
-  }
-
-  private void dumpWorkingMemory()
-  {
-    for (List<MemoryElement> wme : _wm.values())
-    {
-      for (MemoryElement me : wme)
-      {
-        System.out.println(me.toString());
-      }
-    }
   }
 
   public void addRules(List<Rule> rules)
@@ -300,54 +237,7 @@ public class OPS
     Integer Specificity;
   }
 
-  private Match match()
-  {
-    Match match = null;
-
-    for (Rule rule : _rules)
-    {
-      List<MemoryElement> elements = new ArrayList<MemoryElement>();
-      Map<String, Object> vars = new HashMap<String, Object>();
-
-      for (QueryElement qe : rule.Query)
-      {
-        List<MemoryElement> wme = _wm.get(qe.Type);
-
-        boolean haveMatch = false;
-
-        if (wme != null)
-        {
-          for (MemoryElement me : wme)
-          {
-            if (elements.contains(me)) continue;
-            Map<String, Object> tmpVars = new HashMap<String, Object>(vars);
-            haveMatch = compare(qe, me, tmpVars);
-            if (haveMatch)
-            {
-              vars = tmpVars;
-              elements.add(me);
-              break;
-            }
-          }
-        }
-
-        if (!haveMatch)
-        {
-          break;
-        }
-      }
-
-      if (elements.size() == rule.Query.size())
-      {
-        match = new Match(rule, elements, vars);
-        break;
-      }
-    }
-
-    return match;
-  }
-
-  private static Match match(Rule rule, HashMap<String, List<MemoryElement>> wm)
+  private static Match match(Rule rule, WorkingMemory wm)
   {
     Match match = null;
 
@@ -390,66 +280,7 @@ public class OPS
     return match;
   }
 
-  private Match match(ExecutorService e, List<Rule> rules, Rule lastRuleFired, final HashMap<String, List<MemoryElement>> wm)
-  {
-    CompletionService<Match> ecs = new ExecutorCompletionService<Match>(e);
-
-    int n = rules.size();
-
-    List<Future<Match>> futures = new ArrayList<Future<Match>>(n);
-
-    List<Match> hits = new ArrayList<Match>();
-
-    try
-    {
-      for (final Rule rule : rules)
-      {
-        futures.add(ecs.submit(new Callable<Match>()
-        {
-          @Override
-          public Match call() throws Exception
-          {
-            return match(rule, wm);
-          }
-        }));
-      }
-
-      for (int i = 0; i < n; ++i)
-      {
-        try
-        {
-          Match r = ecs.take().get();
-          if (r != null)
-          {
-            hits.add(r);
-          }
-        }
-        catch (ExecutionException ignore)
-        {
-        }
-        catch (InterruptedException e1)
-        {
-          break;
-        }
-      }
-    }
-    finally
-    {
-      for (Future<Match> f : futures)
-      {
-        f.cancel(true);
-      }
-    }
-
-    if (hits.size() == 0) return null;
-
-    // RESOLVE CONFLICT
-    if (hits.size() == 1) return hits.get(0);
-    hits.remove(lastRuleFired);
-    return hits.get(0);
-  }
-
-  private Match match(List<Rule> rules, Rule lastRuleFired, final HashMap<String, List<MemoryElement>> wm)
+  private Match match(List<Rule> rules, Rule lastRuleFired, final WorkingMemory wm)
   {
     List<Match> hits = new ArrayList<Match>();
 

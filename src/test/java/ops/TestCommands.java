@@ -22,15 +22,15 @@ public class TestCommands extends TestCase
   {
     TestContext testContext = createContext();
     testContext.OPS.addRule(createWriteHelloWorldRule());
-    testContext.OPS.insert(new MemoryElement("start"));
+    testContext.OPS.getWorkingMemory().insert(new MemoryElement("start"));
     testContext.OPS.run(1);
   }
 
   public void testValueMatchWrite()
   {
     TestContext testContext = createContext();
-    testContext.OPS.literalize(new MemoryElement("goal", "type", null, "status", null));
-    testContext.OPS.make(new MemoryElement("goal", "type", "remove"));
+    testContext.OPS.getWorkingMemory().literalize(new MemoryElement("goal", "type", null, "status", null));
+    testContext.OPS.getWorkingMemory().make(new MemoryElement("goal", "type", "remove"));
     testContext.OPS.addRule(createGoalRule());
     testContext.OPS.run(1);
   }
@@ -38,8 +38,8 @@ public class TestCommands extends TestCase
   public void testVars()
   {
     TestContext testContext = createContext();
-    testContext.OPS.literalize(new MemoryElement("goal", "type", null, "status", null));
-    testContext.OPS.make(new MemoryElement("goal", "type", "remove"));
+    testContext.OPS.getWorkingMemory().literalize(new MemoryElement("goal", "type", null, "status", null));
+    testContext.OPS.getWorkingMemory().make(new MemoryElement("goal", "type", "remove"));
     testContext.OPS.addRule(createGoalRuleWithVar());
     testContext.OPS.run(1);
   }
@@ -47,10 +47,10 @@ public class TestCommands extends TestCase
   public void testTwoVars()
   {
     TestContext testContext = createContext();
-    testContext.OPS.literalize(new MemoryElement("goal", "type", null, "status", null));
-    testContext.OPS.literalize(new MemoryElement("monkey", "action", null));
-    testContext.OPS.make(new MemoryElement("goal", "type", "remove"));
-    testContext.OPS.make(new MemoryElement("monkey", "action", "remove"));
+    testContext.OPS.getWorkingMemory().literalize(new MemoryElement("goal", "type", null, "status", null));
+    testContext.OPS.getWorkingMemory().literalize(new MemoryElement("monkey", "action", null));
+    testContext.OPS.getWorkingMemory().make(new MemoryElement("goal", "type", "remove"));
+    testContext.OPS.getWorkingMemory().make(new MemoryElement("monkey", "action", "remove"));
     testContext.OPS.addRule(createGoalRuleWithTwoVar());
     testContext.OPS.run(1);
   }
@@ -58,10 +58,10 @@ public class TestCommands extends TestCase
   public void testTwoVarsAndModify()
   {
     TestContext testContext = createContext();
-    testContext.OPS.literalize(new MemoryElement("goal", "type", null, "status", null));
-    testContext.OPS.literalize(new MemoryElement("monkey", "action", null));
-    testContext.OPS.make(new MemoryElement("goal", "type", "remove"));
-    testContext.OPS.make(new MemoryElement("monkey", "action", "remove"));
+    testContext.OPS.getWorkingMemory().literalize(new MemoryElement("goal", "type", null, "status", null));
+    testContext.OPS.getWorkingMemory().literalize(new MemoryElement("monkey", "action", null));
+    testContext.OPS.getWorkingMemory().make(new MemoryElement("goal", "type", "remove"));
+    testContext.OPS.getWorkingMemory().make(new MemoryElement("monkey", "action", "remove"));
     testContext.OPS.addRule(createGoalRuleWithTwoVar());
     testContext.OPS.addRule(createModifyGoalRule());
     testContext.OPS.addRule(createModifyMonkeyRule());

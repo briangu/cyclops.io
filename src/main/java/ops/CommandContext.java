@@ -33,12 +33,12 @@ public class CommandContext
       throw new IllegalArgumentException(String.format("idx %d > match set", idx));
     }
     MemoryElement element = _elements.get(idx);
-    _ops.remove(element);
+    _ops.getWorkingMemory().remove(element);
   }
 
   public MemoryElement make(MemoryElement element)
   {
-    return _ops.make(element);
+    return _ops.getWorkingMemory().make(element);
   }
 
   public MemoryElement modify(int idx, Map<String, Object> values)
@@ -115,6 +115,6 @@ public class CommandContext
 
   public void make(String msg, Object... args)
   {
-    _ops.make(msg, args);
+    _ops.getWorkingMemory().make(msg, args);
   }
 }

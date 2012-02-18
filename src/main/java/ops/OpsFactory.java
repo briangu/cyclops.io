@@ -139,7 +139,7 @@ public class OpsFactory
           }
         }
 
-        ops.literalize(new MemoryElement(recordName, values));
+        ops.getWorkingMemory().literalize(new MemoryElement(recordName, values));
       }
       else if (cmd.equals("make"))
       {
@@ -149,7 +149,7 @@ public class OpsFactory
         {
           values.put(statement.getString(j), statement.get(j+1));
         }
-        ops.make(new MemoryElement(recordName, values));
+        ops.getWorkingMemory().make(new MemoryElement(recordName, values));
       }
       else if (cmd.equals("p"))
       {
@@ -181,7 +181,7 @@ public class OpsFactory
     }
 
     ops.addRules(rulesToAdd);
-    ops.drainInMemoryQueue();
+    ops.getWorkingMemory().drainInMemoryQueue();
 
     return ops;
   }
