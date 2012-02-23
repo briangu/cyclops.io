@@ -114,7 +114,7 @@ public class WorkingMemory
     return newElement;
   }
 
-  public void drainInMemoryQueue()
+  public boolean drainInMemoryQueueBlockable()
   {
     if (_waitForItems) {
       synchronized (_memoryInQueue) {
@@ -130,10 +130,18 @@ public class WorkingMemory
       }
     }
 
+    return drainInMemoryQueue();
+  }
+
+  public boolean drainInMemoryQueue()
+  {
+    int count = 0;
     while(!_memoryInQueue.isEmpty())
     {
       insert(_memoryInQueue.remove());
+      count++;
     }
+    return count > 0;
   }
 
   public boolean HasQueuedItems()

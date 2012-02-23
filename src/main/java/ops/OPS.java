@@ -77,8 +77,13 @@ public class OPS
       Match match = match(_rules, _lastRuleFired, _wm);
       if (match == null)
       {
-        if (_wm.HasQueuedItems() || _asyncTickets.size() > 0) continue;
-        break;
+        boolean dequedNew = _wm.drainInMemoryQueueBlockable();
+
+        if (!dequedNew && _asyncTickets.size() == 0)
+        {
+          break;
+        }
+        continue;
       }
 
       _lastRuleFired = match.Rule;
