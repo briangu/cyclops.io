@@ -53,7 +53,12 @@ public class WorkingMemory
 
   public void literalize(String type, Object... values)
   {
-    literalize(new MemoryElement(type, values));
+    List<Object> kv = new ArrayList<Object>();
+    for (Object key : values) {
+      kv.add(key);
+      kv.add(null);
+    }
+    literalize(new MemoryElement(type, kv.toArray(new Object[kv.size()])));
   }
 
   public void insert(MemoryElement element)
