@@ -257,16 +257,35 @@ public class OPS
 
       if (wme != null)
       {
-        for (MemoryElement me : wme)
+        for (int i = 0; i < wme.size(); i++)
         {
-          if (elements.contains(me)) continue;
-          Map<String, Object> tmpVars = new HashMap<String, Object>(vars);
-          haveMatch = compare(qe, me, tmpVars);
+          List<MemoryElement> tmpelements = new ArrayList<MemoryElement>(elements);
+          Map<String, Object> tmpvars = new HashMap<String, Object>(vars);
+
+          // TODO: should be every permutation
+          Collections.rotate(wme, i);
+
+          for (MemoryElement me : wme)
+          {
+            if (elements.contains(me)) continue;
+            Map<String, Object> tmpVars = new HashMap<String, Object>(vars);
+            haveMatch = compare(qe, me, tmpVars);
+            if (haveMatch)
+            {
+              vars = tmpVars;
+              elements.add(me);
+              break;
+            }
+          }
+
           if (haveMatch)
           {
-            vars = tmpVars;
-            elements.add(me);
             break;
+          }
+          else
+          {
+            elements = tmpelements;
+            vars = tmpvars;
           }
         }
       }
