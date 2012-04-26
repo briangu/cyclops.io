@@ -1,13 +1,7 @@
 package ops;
 
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.*;
 
 
@@ -242,63 +236,88 @@ public class OPS
     Integer Specificity;
   }
 
+  private static class MatchContext
+  {
+    public Set<MemoryElement> Elements;
+    public Map<String, Object> Vars;
+    public Integer QeIdx;
+    public Integer MeIdx;
+
+    public MatchContext()
+    {
+      this(
+        new LinkedHashSet<MemoryElement>(),
+        new HashMap<String, Object>(),
+        0,
+        0);
+    }
+
+    public MatchContext(
+      Set<MemoryElement> element,
+      Map<String, Object> vars,
+      Integer qeIdx,
+      Integer meIdx)
+    {
+      Elements = element;
+      Vars = vars;
+      QeIdx = qeIdx;
+      MeIdx = meIdx;
+    }
+
+    public MatchContext(MatchContext mc)
+    {
+      this(
+        new LinkedHashSet<MemoryElement>(mc.Elements),
+        new HashMap<String, Object>(mc.Vars),
+        mc.QeIdx,
+        mc.MeIdx);
+    }
+  }
+
   private static Match match(Rule rule, WorkingMemory wm)
   {
     Match match = null;
 
-    List<MemoryElement> elements = new ArrayList<MemoryElement>();
-    Map<String, Object> vars = new HashMap<String, Object>();
+    MatchContext mc = new MatchContext();
 
-    for (QueryElement qe : rule.Query)
+    Stack<MatchContext> stack = new Stack<MatchContext>();
+    stack.push(mc);
+
+    while((mc.QeIdx < rule.Query.size()) && (stack.size() > 0))
     {
+      mc = stack.pop();
+
+      QueryElement qe = rule.Query.get(mc.QeIdx);
+
       List<MemoryElement> wme = wm.get(qe.Type);
+      if (wme == null) break;
 
       boolean haveMatch = false;
 
-      if (wme != null)
+      while(mc.MeIdx < wme.size())
       {
-        for (int i = 0; i < wme.size(); i++)
+        MemoryElement me = wme.get(mc.MeIdx++);
+
+        if (mc.Elements.contains(me)) continue;
+
+        MatchContext tmpMc = new MatchContext(mc);
+        haveMatch = compare(qe, me, tmpMc.Vars);
+        if (haveMatch)
         {
-          List<MemoryElement> tmpelements = new ArrayList<MemoryElement>(elements);
-          Map<String, Object> tmpvars = new HashMap<String, Object>(vars);
-
-          // TODO: should be every permutation
-          Collections.rotate(wme, i);
-
-          for (MemoryElement me : wme)
-          {
-            if (elements.contains(me)) continue;
-            Map<String, Object> tmpVars = new HashMap<String, Object>(vars);
-            haveMatch = compare(qe, me, tmpVars);
-            if (haveMatch)
-            {
-              vars = tmpVars;
-              elements.add(me);
-              break;
-            }
-          }
-
-          if (haveMatch)
-          {
-            break;
-          }
-          else
-          {
-            elements = tmpelements;
-            vars = tmpvars;
-          }
+          stack.push(mc);
+          mc = tmpMc;
+          mc.MeIdx = 0;
+          mc.QeIdx++;
+          mc.Elements.add(me);
+          stack.push(mc);
+          break;
         }
-      }
-
-      if (!haveMatch)
-      {
-        break;
       }
     }
 
-    if (elements.size() == rule.Query.size())
+    if (mc.Elements.size() == rule.Query.size())
     {
-      match = new Match(rule, elements, vars);
+      match = new Match(rule, new ArrayList<MemoryElement>(mc.Elements), mc.Vars);
     }
 
     return match;
